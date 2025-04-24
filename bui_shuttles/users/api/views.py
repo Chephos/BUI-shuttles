@@ -8,11 +8,11 @@ from rest_framework.viewsets import GenericViewSet
 
 from bui_shuttles.users.models import User
 
-from ..serializers import UserSerializer
+from ..serializers import User
 
 
 class UserViewSet(RetrieveModelMixin, ListModelMixin, UpdateModelMixin, GenericViewSet):
-    serializer_class = UserSerializer
+    serializer_class = User
     queryset = User.objects.all()
     lookup_field = "pk"
 
@@ -22,5 +22,5 @@ class UserViewSet(RetrieveModelMixin, ListModelMixin, UpdateModelMixin, GenericV
 
     @action(detail=False)
     def me(self, request):
-        serializer = UserSerializer(request.user, context={"request": request})
+        serializer = User(request.user, context={"request": request})
         return Response(status=status.HTTP_200_OK, data=serializer.data)

@@ -20,15 +20,13 @@ class User(AbstractUser, TimeStampModel):
 
     # First and last name do not cover name patterns around the globe
     # name = CharField(_("Name of User"), blank=True, max_length=255)
-    first_name = models.CharField(_("first name"), max_length=255)
-    last_name = models.CharField(_("last name"), max_length=255)
     email = models.EmailField(_("email address"), unique=True)
     username = None  # type: ignore[assignment]
     matric_number = models.CharField(
-        _("matric number"), blank=True, max_length=255, unique=True, null=True
+        _("matric number"), blank=True, max_length=255, unique=True
     )
-    phone_number = models.CharField(max_length=11, unique=True, blank=True, null=True)
-    account_type = models.CharField(_("account type"), max_length=25, choices=choices.AccountType.choices)
+    phone_number = models.CharField(max_length=11, unique=True, blank=True)
+    account_type = models.CharField(_("account type"), max_length=25, choices=choices.AccountType.choices, default=choices.AccountType.student.value)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

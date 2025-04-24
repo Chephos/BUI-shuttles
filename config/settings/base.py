@@ -81,9 +81,6 @@ THIRD_PARTY_APPS = [
     "django_celery_beat",
     "rest_framework",
     "rest_framework.authtoken",
-    "rest_framework_simplejwt",
-    "dj_rest_auth",
-    "dj_rest_auth.registration",
     "corsheaders",
     "drf_spectacular",
 ]
@@ -334,8 +331,6 @@ SOCIALACCOUNT_FORMS = {"signup": "bui_shuttles.users.forms.UserSocialSignupForm"
 # django-rest-framework - https://www.django-rest-framework.org/api-guide/settings/
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.TokenAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
