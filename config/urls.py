@@ -22,6 +22,9 @@ urlpatterns = [
     # User management
     path("users/", include("bui_shuttles.users.urls", namespace="users")),
     # Your stuff: custom urls includes go here
+    path("trips/", include("bui_shuttles.trips.urls", namespace="trips")),
+    path("wallets/", include("bui_shuttles.wallets.urls", namespace="wallets")),
+    path("bookings/", include("bui_shuttles.bookings.urls", namespace="bookings")),
     # ...
     # Media files
     *static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT),

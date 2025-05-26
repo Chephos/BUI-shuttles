@@ -11,3 +11,5 @@ class VehicleType(models.TextChoices):
     cab = "cab", _("Cab")
     sienna = "sienna", _("Sienna")
     bus = "bus", _("Bus")
+
+

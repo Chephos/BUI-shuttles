@@ -5,24 +5,38 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import RedirectView
 from django.views.generic import UpdateView
-from rest_framework import views, permissions
-from rest_framework.response import Response
+from rest_framework import (
+    views,
+    permissions,
+    status,
+    response,
+    mixins,
+    generics,
+    viewsets,
+)
 
 from bui_shuttles.users.models import User
-from bui_shuttles.users import serializers, workers, exceptions
+from bui_shuttles.users import (
+    serializers,
+    workers,
+    exceptions,
+    permissions as user_permissions,
+    models,
+    choices,
+)
 
 
-class UserDetailView(views.APIView):
-    serializer_class = serializers.User
-    permission_classes = [permissions.IsAuthenticated]
+# class UserDetailView(views.APIView):
+#     serializer_class = serializers.User
+#     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request):
-        user = request.user
-        serializer = self.serializer_class(user)
-        return Response(serializer.data, status=200)
+#     def get(self, request):
+#         user = request.user
+#         serializer = self.serializer_class(user)
+#         return Response(serializ er.data, status=200)
 
 
-user_detail_view = UserDetailView.as_view()
+# user_detail_view = UserDetailView.as_view()
 
 
 class UserUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
@@ -67,7 +81,7 @@ class GenerateOTP(views.APIView):
         otp_sent = workers.OTP.send_otp(serializer.validated_data["email"])
         if not otp_sent:
             raise exceptions.InvalidOTP
-        return Response({"message": "OTP sent successfully"}, status=200)
+        return response.Response({"message": "OTP sent successfully"}, status=200)
 
 
 class VerifyOTP(views.APIView):
@@ -79,8 +93,8 @@ class VerifyOTP(views.APIView):
         serializer.is_valid(raise_exception=True)
         otp_verified = workers.OTP.verify_otp(**serializer.validated_data)
         if not otp_verified:
-            return Response({"message": "Invalid OTP"}, status=400)
-        return Response({"message": "OTP verified successfully"}, status=200)
+            return response.Response({"message": "Invalid OTP"}, status=400)
+        return response.Response({"message": "OTP verified successfully"}, status=200)
 
 
 class Register(views.APIView):
@@ -94,7 +108,7 @@ class Register(views.APIView):
 
             user = serializer.save()
             token = workers.Token.create_token(user)
-            return Response({"token": token}, status=201)
+            return response.Response({"token": token}, status=201)
         else:
             raise exceptions.OTPVerificationFailed
 
@@ -106,15 +120,13 @@ class Login(views.APIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = workers.User.get_user_from_email(
-            email=serializer.validated_data["email"]
-        )
+        user = workers.User.get_user_by_email(email=serializer.validated_data["email"])
         if user:
             if user.check_password(serializer.validated_data["password"]):
                 token = workers.Token.create_token(user)
-                return Response({"token": token}, status=200)
+                return response.Response({"token": token}, status=200)
             else:
-                return Response({"message": "Invalid password"}, status=400)
+                return response.Response({"message": "Invalid password"}, status=400)
 
 
 class Logout(views.APIView):
@@ -122,4 +134,59 @@ class Logout(views.APIView):
 
     def post(self, request):
         workers.Token.delete_token(request.user)
-        return Response({"message": "Logout successful"}, status=200)
+        return response.Response({"message": "Logout successful"}, status=200)
+
+
+class AddBank(views.APIView):
+    serializer_class = serializers.BankDetail
+    permission_classes = [user_permissions.IsDriver]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        workers.Driver.add_bank(request.user, serializer.validated_data)
+        return response.Response(
+            status=status.HTTP_200_OK,
+            data={"detail": "Bank details added successfully"},
+        )
+
+
+class Vehicle(
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    permission_classes = [user_permissions.IsDriver]
+    queryset = models.Vehicle.objects.all()
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return serializers.VehicleDetail
+        return serializers.Vehicle
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            self.permission_classes = [permissions.IsAuthenticated]
+        elif self.request.method in ["PUT", "PATCH"]:
+            self.permission_classes = [user_permissions.IsDriver]
+        return super().get_permissions()
+
+
+
+
+
+
+class UserProfile(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
+    queryset = models.User.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.user.account_type == choices.AccountType.student.value:
+            return serializers.StudentProfile
+        elif self.request.user.account_type == choices.AccountType.driver.value:
+            if self.request.method == "GET":
+                return serializers.DriverProfile
+            return serializers.DriverProfileUpdate
+        return serializers.UserDetail

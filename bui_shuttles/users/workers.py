@@ -83,7 +83,7 @@ class User:
         return False
 
     @classmethod
-    def get_user_from_email(cls, email):
+    def get_user_by_email(cls, email):
         user = models.User.objects.filter(email=email).first()
         if user:
             return user
@@ -103,3 +103,29 @@ class Token:
             token.delete()
         except Token.DoesNotExist:
             pass
+
+
+class Driver:
+
+    @classmethod
+    def get_driver_by_id(cls, driver_id):
+        driver = models.Driver.objects.filter(id=driver_id).first()
+        if driver:
+            return driver
+        return None
+    
+    @classmethod
+    def get_available_drivers(cls, route_id):
+        return models.Driver.objects.filter(available=True)
+    
+    @classmethod
+    def add_bank(cls, user, bank_details: dict):
+        """
+        Add bank details to a user
+        """
+        driver = user.driver
+        driver.bank_code = bank_details["bank_code"]
+        driver.bank_account_number = bank_details["bank_account_number"]
+        driver.bank_account_name = bank_details["bank_account_name"]
+        driver.save()
+        return user

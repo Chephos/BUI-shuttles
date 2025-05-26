@@ -1,0 +1,69 @@
+from rest_framework import serializers
+from django.utils import timezone
+
+from bui_shuttles.trips import models
+from bui_shuttles.trips import choices
+from bui_shuttles.users import serializers as user_serializers
+
+
+class Trips(serializers.ModelSerializer):
+    class Meta:
+        models = models.Trip
+        fields = ["id", "route", "driver", "available_seats", "status", "take_off_time"]
+
+
+class TripCreate(serializers.ModelSerializer):
+    class Meta:
+        models = models.Trip
+        fields = ["route", "available_seats", "take_off_time"]
+
+    def validate_take_off_time(self, value):
+        if value < timezone.now():
+            raise serializers.ValidationError("Take off time cannot be in the past.")
+        return value
+
+
+class TripUpdate(serializers.ModelSerializer):
+    class Meta:
+        models = models.Trip
+        fields = ["status", "take_off_time"]
+
+    def validate_take_off_time(self, value):
+        if value < timezone.now():
+            raise serializers.ValidationError("Take off time cannot be in the past.")
+        return value
+
+    def update(self, instance, validated_data):
+        new_status = validated_data.get("status")
+        if new_status not in [choices.NEXT_STATUS_MAP[instance.status]]:
+            raise serializers.ValidationError(
+                f"You cannot move from {instance.status} to {new_status}"
+            )
+        return super().update(instance, validated_data)
+
+
+class Route(serializers.ModelSerializer):
+    class Meta:
+        models = models.Route
+        fields = ["id", "name", "stops"]
+
+
+class Trip(serializers.ModelSerializer):
+    class Meta:
+        models = models.Trip
+        fields = ["id", "driver", "available_seats", "status", "take_off_time"]
+
+
+class RouteDetail(serializers.ModelSerializer):
+    trips = Trip(many=True, read_only=True)
+
+    class Meta:
+        models = models.Route
+        fields = ["id", "name", "stops", "trips"]
+
+    def to_representation(self, instance):
+        rep = super().to_representation(instance)
+        filtered_trips = self.context.get("filtered_trips")
+        if filtered_trips is not None:
+            rep["trips"] = Trip(filtered_trips, many=True).data
+        return rep

@@ -22,9 +22,7 @@ class User(AbstractUser, TimeStampModel):
     # name = CharField(_("Name of User"), blank=True, max_length=255)
     email = models.EmailField(_("email address"), unique=True)
     username = None  # type: ignore[assignment]
-    matric_number = models.CharField(
-        _("matric number"), blank=True, max_length=255, unique=True
-    )
+   
     phone_number = models.CharField(max_length=11, unique=True, blank=True)
     account_type = models.CharField(_("account type"), max_length=25, choices=choices.AccountType.choices, default=choices.AccountType.student.value)
 
@@ -42,13 +40,40 @@ class User(AbstractUser, TimeStampModel):
         """
         return reverse("users:detail", kwargs={"pk": self.id})
 
-class School(TimeStampModel):
-    name = models.CharField(max_length=255, unique=True)
+class Student(TimeStampModel):
+    matric_number = models.CharField(
+        _("matric number"), blank=True, max_length=255, unique=True
+    )
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="student", null=True
+    )
+
+class Driver(TimeStampModel):
+    is_available = models.BooleanField(default=False)
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="driver", null=True
+    )
+    vehicle = models.OneToOneField(
+        "Vehicle", on_delete=models.CASCADE, related_name="driver", null=True
+    )
+    to_route = models.ForeignKey(
+        "trips.Route", on_delete=models.CASCADE, null=True, related_name="drivers_to"
+    )
+    from_route = models.ForeignKey(
+        "trips.Route", on_delete=models.CASCADE, null=True, related_name="drivers_from"
+    )
+    price = models.IntegerField(default=0) # price in kobo per seat
+
+    # account details
+    bank_code = models.CharField(max_length=10, null=True, blank=True)
+    bank_account_number = models.CharField(max_length=11, null=True, blank=True)
+    bank_account_name = models.CharField(max_length=100, null=True, blank=True)
+
+
+
 
 class Vehicle(TimeStampModel):
     name = models.CharField(max_length=255, unique=True)
     capacity = models.PositiveIntegerField(default=0)
-    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name="vehicles")
-    driver = models.ForeignKey(User, on_delete=models.CASCADE, related_name="vehicles")
     reg_number = models.CharField(max_length=255, unique=True)
     vehicle_type = models.CharField(max_length=255, choices=choices.VehicleType.choices)

@@ -87,7 +87,9 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "bui_shuttles.users",
-    # Your stuff: custom apps go here
+    "bui_shuttles.bookings",
+    "bui_shuttles.trips",
+    "bui_shuttles.wallets",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -351,3 +353,6 @@ SPECTACULAR_SETTINGS = {
 }
 # Your stuff...
 # ------------------------------------------------------------------------------
+
+PAYSTACK_SECRET_KEY = env("PAYSTACK_SECRET_KEY")
+PAYSTACK_PUBLIC_KEY = env("PAYSTACK_PUBLIC_KEY")
