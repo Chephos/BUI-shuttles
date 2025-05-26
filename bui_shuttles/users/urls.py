@@ -4,7 +4,10 @@ from rest_framework import routers
 from . import views
 
 router = routers.DefaultRouter()
-router.register(r"vehicles", views.Vehicle, )
+router.register(
+    r"vehicles",
+    views.Vehicle,
+)
 router.register(r"user_profile", views.UserProfile, "user_profile")
 
 app_name = "users"
