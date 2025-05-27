@@ -8,13 +8,13 @@ from bui_shuttles.users import serializers as user_serializers
 
 class Trips(serializers.ModelSerializer):
     class Meta:
-        models = models.Trip
+        model = models.Trip
         fields = ["id", "route", "driver", "available_seats", "status", "take_off_time"]
 
 
 class TripCreate(serializers.ModelSerializer):
     class Meta:
-        models = models.Trip
+        model = models.Trip
         fields = ["route", "available_seats", "take_off_time"]
 
     def validate_take_off_time(self, value):
@@ -25,7 +25,7 @@ class TripCreate(serializers.ModelSerializer):
 
 class TripUpdate(serializers.ModelSerializer):
     class Meta:
-        models = models.Trip
+        model = models.Trip
         fields = ["status", "take_off_time"]
 
     def validate_take_off_time(self, value):
@@ -44,13 +44,13 @@ class TripUpdate(serializers.ModelSerializer):
 
 class Route(serializers.ModelSerializer):
     class Meta:
-        models = models.Route
+        model = models.Route
         fields = ["id", "name", "stops"]
 
 
 class Trip(serializers.ModelSerializer):
     class Meta:
-        models = models.Trip
+        model = models.Trip
         fields = ["id", "driver", "available_seats", "status", "take_off_time"]
 
 
@@ -58,7 +58,7 @@ class RouteDetail(serializers.ModelSerializer):
     trips = Trip(many=True, read_only=True)
 
     class Meta:
-        models = models.Route
+        model = models.Route
         fields = ["id", "name", "stops", "trips"]
 
     def to_representation(self, instance):
