@@ -1,4 +1,3 @@
-
 from typing import ClassVar
 
 from django.contrib.auth.models import AbstractUser
@@ -22,9 +21,14 @@ class User(AbstractUser, TimeStampModel):
     # name = CharField(_("Name of User"), blank=True, max_length=255)
     email = models.EmailField(_("email address"), unique=True)
     username = None  # type: ignore[assignment]
-   
+
     phone_number = models.CharField(max_length=11, unique=True, blank=True)
-    account_type = models.CharField(_("account type"), max_length=25, choices=choices.AccountType.choices, default=choices.AccountType.student.value)
+    account_type = models.CharField(
+        _("account type"),
+        max_length=25,
+        choices=choices.AccountType.choices,
+        default=choices.AccountType.student.value,
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -40,6 +44,7 @@ class User(AbstractUser, TimeStampModel):
         """
         return reverse("users:detail", kwargs={"pk": self.id})
 
+
 class Student(TimeStampModel):
     matric_number = models.CharField(
         _("matric number"), blank=True, max_length=255, unique=True
@@ -47,6 +52,7 @@ class Student(TimeStampModel):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="student", null=True
     )
+
 
 class Driver(TimeStampModel):
     is_available = models.BooleanField(default=False)
@@ -62,7 +68,7 @@ class Driver(TimeStampModel):
     from_route = models.ForeignKey(
         "trips.Route", on_delete=models.CASCADE, null=True, related_name="drivers_from"
     )
-    price = models.IntegerField(default=0) # price in kobo per seat
+    price = models.IntegerField(default=0)  # price in kobo per seat
 
     # account details
     bank_code = models.CharField(max_length=10, null=True, blank=True)
@@ -70,10 +76,14 @@ class Driver(TimeStampModel):
     bank_account_name = models.CharField(max_length=100, null=True, blank=True)
 
 
-
-
 class Vehicle(TimeStampModel):
     name = models.CharField(max_length=255, unique=True)
     capacity = models.PositiveIntegerField(default=0)
     reg_number = models.CharField(max_length=255, unique=True)
     vehicle_type = models.CharField(max_length=255, choices=choices.VehicleType.choices)
+
+
+class OTP(TimeStampModel):
+    otp_code = models.CharField(max_length=6)
+    email = models.EmailField(unique=True)
+    is_verified = models.BooleanField(default=False)

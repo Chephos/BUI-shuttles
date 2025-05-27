@@ -11,7 +11,6 @@ from rest_framework import (
     status,
     response,
     mixins,
-    generics,
     viewsets,
 )
 

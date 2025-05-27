@@ -83,7 +83,7 @@ class Register(serializers.ModelSerializer):
                 user=user,
                 matric_number=validated_data["matric_number"],
             )
-        elif user.account_type == AccountType.rider.value:
+        elif user.account_type == AccountType.driver.value:
             models.Driver.objects.create(
                 user=user,
             )

@@ -1,18 +1,17 @@
 import random
-import redis
+
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.utils import timezone
 
 from rest_framework.authtoken import models as token_models
 
 from bui_shuttles.users import models
 
 
-REDIS = redis.from_url(settings.REDIS_URL, decode_responses=True)
-
-
 class OTP:
+    model = models.OTP
 
     @classmethod
     def _create_user_otp_id(cls, email):
@@ -21,29 +20,39 @@ class OTP:
     @classmethod
     def create_otp(cls, **kwargs):
         # Generate 6-digit OTP
-        otp = str(random.randint(100000, 999999))
-        user_otp_id = cls._create_user_otp_id(kwargs["email"])
-        REDIS.hset(user_otp_id, mapping={**kwargs, "otp": otp, "is_validated": 0})
-        REDIS.expire(user_otp_id, 300)  # Set expiration time to 5 minutes
-        return otp
+        email = kwargs.get("email")
+        otp = cls.model.objects.filter(email=email).first()
+        if otp:
+            if otp.created < (timezone.now() - timezone.timedelta(minutes=5)):
+                # If the OTP is older than 5 minutes, generate a new one
+                otp.otp_code = str(random.randint(100000, 999999))
+                otp.created = timezone.now()
+                otp.save()
+        else:
+            otp_code = str(random.randint(100000, 999999))
+            otp = cls.model.objects.create(email=email, otp_code=otp_code)
+        return otp.otp_code
 
     @classmethod
     def get_otp(cls, email):
-        user_otp_id = cls._create_user_otp_id(email)
-        return REDIS.hgetall(user_otp_id)
+        otp = cls.model.objects.filter(email=email).first()
+        return otp
 
     @classmethod
     def delete_otp(cls, email):
-        user_otp_id = cls._create_user_otp_id(email)
-        REDIS.delete(user_otp_id)
+        cls.get_otp(email).delete()
 
     @classmethod
     def verify_otp(cls, email, otp):
-        user_otp_id = cls._create_user_otp_id(email)
-        stored_otp = REDIS.hget(user_otp_id, "otp")
-        if stored_otp == otp:
-            REDIS.hset(user_otp_id, "is_validated", 1)
-            return cls.get_otp(email)
+        stored_otp = cls.get_otp(email)
+        if stored_otp and stored_otp.created > (
+            timezone.now() - timezone.timedelta(minutes=5)
+        ):
+
+            if stored_otp.otp_code == otp:
+                stored_otp.is_verified = True
+                stored_otp.save()
+                return True
         return False
 
     @classmethod
@@ -53,7 +62,7 @@ class OTP:
 
         send_mail(
             "OTP Verification",
-            f"Your OTP is {otp}.",
+            f"omo your OTP is {otp}. please use it within 5 minutes, i saw shege while pushing to production.",
             "efosacharlesabu@gmail.com",
             [email],
             fail_silently=False,
@@ -67,10 +76,11 @@ class OTP:
         :param phone_number: str
         :return: bool
         """
-        user_otp_id = cls._create_user_otp_id(email)
-        if REDIS.hexists(user_otp_id, "is_validated"):
-            if REDIS.hget(user_otp_id, "is_validated") == "1":
-                return True
+        otp = cls.get_otp(email)
+        if otp and otp.is_verified:
+            otp.delete()
+            return True
+
         return False
 
 
@@ -113,11 +123,11 @@ class Driver:
         if driver:
             return driver
         return None
-    
+
     @classmethod
     def get_available_drivers(cls, route_id):
         return models.Driver.objects.filter(available=True)
-    
+
     @classmethod
     def add_bank(cls, user, bank_details: dict):
         """
