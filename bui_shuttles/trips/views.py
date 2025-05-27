@@ -1,15 +1,9 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.messages.views import SuccessMessageMixin
-from django.db.models import QuerySet
-from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import RedirectView
-from django.views.generic import UpdateView
+
 from rest_framework import views, permissions
 from rest_framework.response import Response
 from rest_framework import filters, mixins, viewsets
 
-from rest_framework import generics
 
 from bui_shuttles.trips import (
     serializers,
@@ -17,7 +11,7 @@ from bui_shuttles.trips import (
     workers,
     permissions as trip_permissions,
 )
-from bui_shuttles.users import models as user_models, permissions as user_permissions
+from bui_shuttles.users import  permissions as user_permissions
 
 
 class Route(
