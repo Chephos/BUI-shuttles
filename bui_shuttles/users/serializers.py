@@ -102,12 +102,17 @@ class BankDetail(serializers.Serializer):
     bank_code = serializers.CharField(required=True, max_length=10)
     bank_account_number = serializers.CharField(
         required=True,
-        max_length=11,
+        max_length=10,
         validators=[
             RegexValidator(regex=number_regex, message="Invalid account number")
         ],
     )
     bank_account_name = serializers.CharField(required=True, max_length=100)
+
+    def validate_bank_account_number(self, value):
+        if len(value) != 10 or not value.isdigit():
+            raise serializers.ValidationError("Account number must be 10 digits.")
+        return value
 
 
 class Vehicle(serializers.ModelSerializer):

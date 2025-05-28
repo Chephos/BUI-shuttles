@@ -15,7 +15,7 @@ urlpatterns = [
     path("~redirect/", view=views.user_redirect_view, name="redirect"),
     path("~update/", view=views.user_update_view, name="update"),
     # path("", view=views.user_detail_view, name="detail"),
-    path("add-bank", views.AddBank.as_view(), name="add_bank"),
+    path("add-bank/", views.AddBank.as_view(), name="add_bank"),
     path("generate-otp/", view=views.GenerateOTP.as_view(), name="generate_otp"),
     path("verify-otp/", view=views.VerifyOTP.as_view(), name="verify_otp"),
     path("register/", view=views.Register.as_view(), name="register"),

@@ -138,7 +138,7 @@ class Logout(views.APIView):
 
 class AddBank(views.APIView):
     serializer_class = serializers.BankDetail
-    permission_classes = [user_permissions.IsDriver]
+    permission_classes = [~user_permissions.HasBankDetails]
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
@@ -171,14 +171,11 @@ class Vehicle(
         elif self.request.method in ["PUT", "PATCH"]:
             self.permission_classes = [user_permissions.IsDriver]
         return super().get_permissions()
-    
 
 
-
-
-
-
-class UserProfile(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
+class UserProfile(
+    mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet
+):
     queryset = models.User.objects.all()
     permission_classes = [permissions.IsAuthenticated]
 
@@ -190,13 +187,10 @@ class UserProfile(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
                 return serializers.DriverProfile
             return serializers.DriverProfileUpdate
         return serializers.UserDetail
-    
+
     def get_queryset(self):
         if self.request.user.account_type == choices.AccountType.student.value:
             return models.Student.objects.filter(user=self.request.user)
         elif self.request.user.account_type == choices.AccountType.driver.value:
             return models.Driver.objects.filter(user=self.request.user)
         return super().get_queryset()
-    
-    
-

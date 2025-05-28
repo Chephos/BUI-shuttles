@@ -13,7 +13,7 @@ class BanksList(views.APIView):
 class BankAccountName(views.APIView):
     def get(self, request, *args, **kwargs):
         account_name = workers.Paystack.get_account_name(
-            account_number=request.GET.get("account_number"), bank_code=request.GET.get("bank_code")
+            account_number=request.query_params.get("account_number"), bank_code=request.query_params.get("bank_code")
         )
         return response.Response(data={"account_name": account_name}, status=status.HTTP_200_OK)
 
