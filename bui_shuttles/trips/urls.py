@@ -10,7 +10,7 @@ router.register("", views.Trip, basename="trip")
 app_name = "trips"
 urlpatterns = [
     path(
-        "driver/<int:driver_id>/routes/",
+        "driver/routes/",
         views.DriverRoutes.as_view(),
         name="driver_routes",
     ),

@@ -8,7 +8,7 @@ class Trip:
     model = models.Trip
 
     @classmethod
-    def get_available_trips(cls, route_id):
+    def get_available_trips(cls):
         return cls.model.objects.filter(
             status=choices.TripStatus.not_started, take_off_time__gt=timezone.now()
         ).select_related("driver", "route")
@@ -33,10 +33,12 @@ class Trip:
         return trip
 
     @classmethod
-    def create_trip(cls, route_id, driver, available_seats, take_off_time):
-        vehicle_capacity = driver.vehicle.capacity
-        if vehicle_capacity < available_seats:
-            raise ValueError("Available seats cannot be more than vehicle capacity")
+    def create_trip(
+        cls, route_id, driver: user_models.Driver, available_seats, take_off_time
+    ):
+        if cls.model.objects.filter(take_off_time=take_off_time, driver=driver).first():
+             # todo: cannot create trip for the same take off time twice
+            raise ValueError()
         trip = cls.model.objects.create(
             route=route_id,
             driver=driver,
@@ -44,6 +46,12 @@ class Trip:
             take_off_time=take_off_time,
         )
         return trip
+    
+    @classmethod
+    def get_driver_trips(cls, driver: user_models.Driver):
+        return cls.model.objects.filter(driver=driver).select_related("route").order_by(
+            "-take_off_time"
+        ).prefetch_related("bookings")
 
 
 class Route:
@@ -53,7 +61,7 @@ class Route:
     def get_driver_routes(cls, driver: user_models.Driver):
         driver_obj = user_models.Driver.objects.select_related(
             "to_route", "from_route"
-        ).get(user=driver)
+        ).get(id=driver.id)
         routes = {
             "to_route": {
                 "id": driver_obj.to_route.id,
@@ -70,6 +78,6 @@ class Route:
 
     @classmethod
     def get_route_trips(cls, route):
-        route.trips.filter(
-            status=choices.TripStatus.not_started, take_off_time__gt=timezone.now()
+        return route.trips.filter(
+            status=choices.TripStatus.not_started.value, take_off_time__gt=timezone.now()
         )

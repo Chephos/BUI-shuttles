@@ -10,8 +10,9 @@ from bui_shuttles.trips import (
     models,
     workers,
     permissions as trip_permissions,
+    exceptions,
 )
-from bui_shuttles.users import  permissions as user_permissions
+from bui_shuttles.users import permissions as user_permissions, choices as user_choices
 
 
 class Route(
@@ -65,6 +66,17 @@ class Trip(
         elif self.action == "create":
             return serializers.TripCreate
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.action == "create":
+            context["driver_routes"] = [
+                value["id"]
+                for value in workers.Route.get_driver_routes(
+                    self.request.user.driver
+                ).values()
+            ]
+        return context
+
     def get_permissions(self):
         if self.action in ["retrieve", "list"]:
             self.permission_classes = [permissions.AllowAny]
@@ -76,22 +88,32 @@ class Trip(
         return super().get_permissions()
 
     def get_queryset(self):
+        user = self.request.user
         if self.action == "list":
+            if user.is_authenticated:
+                if user.account_type == user_choices.AccountType.driver.value:
+                    return workers.Trip.get_driver_trips(user.driver)
             return workers.Trip.get_available_trips()
         return super().get_queryset()
 
     def perform_create(self, serializer):
-        workers.Trip.create_trip(
-            route_id=serializer.validated_data["route"],
-            driver_id=self.request.user.driver.id,
-            available_seats=serializer.validated_data["available_seats"],
-            take_off_time=serializer.validated_data["take_off_time"],
-        )
+        if not self.request.user.driver.vehicle:
+            raise exceptions.VehicleRequired
+
+        try:
+            workers.Trip.create_trip(
+                route_id=serializer.validated_data["route"],
+                driver=self.request.user.driver,
+                available_seats=self.request.user.driver.vehicle.capacity,
+                take_off_time=serializer.validated_data["take_off_time"],
+            )
+        except ValueError as e:
+            raise exceptions.TimeBookedForATrip
 
 
 class DriverRoutes(views.APIView):  # when driver wants to create trips
     permission_classes = [user_permissions.IsDriver]
 
-    def get(self):
-        routes = workers.Route.get_driver_routes(self.request.user.driver)
+    def get(self, request, *args, **kwargs):
+        routes = workers.Route.get_driver_routes(request.user.driver)
         return Response(routes)
