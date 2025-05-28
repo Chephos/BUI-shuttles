@@ -79,7 +79,7 @@ class Register(serializers.ModelSerializer):
             account_type=validated_data["account_type"],
         )
         if user.account_type == AccountType.student.value:
-            models.Students.objects.create(
+            models.Student.objects.create(
                 user=user,
                 matric_number=validated_data["matric_number"],
             )
@@ -110,16 +110,37 @@ class BankDetail(serializers.Serializer):
     bank_account_name = serializers.CharField(required=True, max_length=100)
 
 
-class Vehicle(serializers.Serializer):
-    name = serializers.CharField(required=True, max_length=255)
-    capacity = serializers.IntegerField(required=True)
-    reg_number = serializers.CharField(required=True, max_length=255)
-    vehicle_type = serializers.ChoiceField(
-        choices=choices.VehicleType.choices, required=True
-    )
-   
+class Vehicle(serializers.ModelSerializer):
 
-class DriverProfile(UserDetail):
+    class Meta:
+        model = models.Vehicle
+        fields = [
+            "name",
+            "capacity",
+            "reg_number",
+            "vehicle_type",
+        ]
+
+    def create(self, validated_data):
+        context = self.context
+        driver = context.get("request").user.driver
+        if not driver:
+            raise serializers.ValidationError("Only drivers can create vehicles.")
+        vehicle = models.Vehicle.objects.filter(driver=driver).first()
+        if vehicle:
+            return super().update(vehicle, validated_data)
+        new_vehicle = super().create(validated_data)
+        driver.vehicle = new_vehicle
+        driver.save()
+        return new_vehicle
+
+
+class DriverProfile(serializers.Serializer):
+    first_name = serializers.SerializerMethodField()
+    last_name = serializers.SerializerMethodField()
+    email = serializers.SerializerMethodField()
+    phone_number = serializers.SerializerMethodField()
+    account_type = serializers.SerializerMethodField()
     is_available = serializers.BooleanField()
     vehicle = Vehicle()
     to_route = serializers.SerializerMethodField()
@@ -129,19 +150,61 @@ class DriverProfile(UserDetail):
     bank_account_name = serializers.CharField(read_only=True)
 
     def get_to_route(self, obj):
+        if not obj.to_route:
+            return None
         return obj.to_route.name
-    
-    def get_from_route(self, obj):
-        return obj.from_route.name
-class VehicleDetail(Vehicle):
-    drivers = DriverProfile(many=True, read_only=True)
 
-class DriverProfileUpdate(DriverProfile):
-    to_route = serializers.IntegerField()
-    from_route = serializers.IntegerField()
-    bank_account_name = None
-    bank_account_number = None
-    vehicle = None
+    def get_from_route(self, obj):
+        if not obj.from_route:
+            return None
+        return obj.from_route.name
+
+    def get_first_name(self, obj):
+        return obj.user.first_name
+
+    def get_last_name(self, obj):
+        return obj.user.last_name
+
+    def get_email(self, obj):
+        return obj.user.email
+
+    def get_phone_number(self, obj):
+        return obj.user.phone_number
+
+    def get_account_type(self, obj):
+        return obj.user.account_type
+
+
+class VehicleDetail(Vehicle):
+    driver = DriverProfile(read_only=True)
+
+    class Meta:
+        model = models.Vehicle
+        fields = [
+            "id",
+            "name",
+            "capacity",
+            "reg_number",
+            "vehicle_type",
+            "driver",
+        ]
+
+
+class DriverProfileUpdate(serializers.ModelSerializer):
+    first_name = serializers.CharField(max_length=255, required=False)
+    last_name = serializers.CharField(max_length=255, required=False)
+    is_available = serializers.BooleanField(required=False)
+
+    class Meta:
+        model = models.Driver
+        fields = [
+            "first_name",
+            "last_name",
+            "is_available",
+            "to_route",
+            "from_route",
+            "price",
+        ]
 
     def validate(self, attrs):
         to_route = attrs.get("to_route")
@@ -153,4 +216,3 @@ class DriverProfileUpdate(DriverProfile):
 
 class StudentProfile(UserDetail):
     matric_number = serializers.CharField(read_only=True)
-    

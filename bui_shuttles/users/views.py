@@ -171,6 +171,7 @@ class Vehicle(
         elif self.request.method in ["PUT", "PATCH"]:
             self.permission_classes = [user_permissions.IsDriver]
         return super().get_permissions()
+    
 
 
 
@@ -189,3 +190,13 @@ class UserProfile(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
                 return serializers.DriverProfile
             return serializers.DriverProfileUpdate
         return serializers.UserDetail
+    
+    def get_queryset(self):
+        if self.request.user.account_type == choices.AccountType.student.value:
+            return models.Student.objects.filter(user=self.request.user)
+        elif self.request.user.account_type == choices.AccountType.driver.value:
+            return models.Driver.objects.filter(user=self.request.user)
+        return super().get_queryset()
+    
+    
+
