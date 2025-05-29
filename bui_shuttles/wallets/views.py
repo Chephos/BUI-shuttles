@@ -1,8 +1,10 @@
 from django.shortcuts import render
 
-from rest_framework import views, response, status
+from rest_framework import views, response, status, viewsets, mixins
+from rest_framework.permissions import IsAuthenticated
 
 from bui_shuttles.wallets import workers, permissions, serializers
+
 
 class BanksList(views.APIView):
     def get(self, request, *args, **kwargs):
@@ -13,9 +15,13 @@ class BanksList(views.APIView):
 class BankAccountName(views.APIView):
     def get(self, request, *args, **kwargs):
         account_name = workers.Paystack.get_account_name(
-            account_number=request.query_params.get("account_number"), bank_code=request.query_params.get("bank_code")
+            account_number=request.query_params.get("account_number"),
+            bank_code=request.query_params.get("bank_code"),
         )
-        return response.Response(data={"account_name": account_name}, status=status.HTTP_200_OK)
+        return response.Response(
+            data={"account_name": account_name}, status=status.HTTP_200_OK
+        )
+
 
 class PaystackWebhooks(views.APIView):
     permission_classes = [permissions.PaystackPermission]
@@ -35,3 +41,18 @@ class PaystackWebhooks(views.APIView):
         else:
             return response.Response(status=status.HTTP_404_NOT_FOUND, data={})
         return response.Response(status=status.HTTP_200_OK, data={})
+
+
+class Transaction(
+    mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
+    serializer_class = serializers.Transaction
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return workers.Transaction.get_transactions(self.request.user)
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return serializers.TransactionList
+        return serializers.Transaction

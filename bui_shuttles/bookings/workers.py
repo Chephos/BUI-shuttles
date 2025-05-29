@@ -37,3 +37,7 @@ class Booking:
     @classmethod
     def get_bookings_for_driver(cls, driver: user_models.Driver):
         return cls.model.objects.filter(trip__driver=driver)
+    
+    @classmethod
+    def get_booking_for_student_by_trip(cls, student: user_models.Student, trip: trip_models.Trip):
+        return cls.model.objects.filter(booker=student, trip=trip).first()

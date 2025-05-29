@@ -1,7 +1,8 @@
-from rest_framework import views, response, viewsets, mixins
+from rest_framework import viewsets, mixins
+from rest_framework.response import Response
 
 from bui_shuttles.bookings import serializers, exceptions, workers, permissions
-from bui_shuttles.trips import workers as trip_workers
+from bui_shuttles.trips import workers as trip_workers, exceptions as trip_exceptions
 from bui_shuttles.users import permissions as user_permissions, choices as user_choices
 from bui_shuttles.wallets import workers as wallet_workers, choices as wallet_choices
 
@@ -47,13 +48,18 @@ class Bookings(
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         response = self.perform_create(serializer)
-        return response.Response(response, status=201)
+        headers = self.get_success_headers(serializer.data)
+        return Response(response, status=201, headers=headers)
 
     def perform_create(self, serializer):
-
-        trip = trip_workers.Trip.get_trip_by_id(serializer.data["trip"])
+        trip = trip_workers.Trip.get_bookable_trip(serializer.data["trip"])
+        you_booked_already = workers.Booking.get_booking_for_student_by_trip(
+            student=self.request.user.student, trip=trip
+        )
+        if you_booked_already:
+            raise exceptions.AlreadyBooked
         if not trip:
-            raise exceptions.InvalidTrip
+            raise trip_exceptions.InvalidTrip
         booking = workers.Booking.create_booking(
             booker=self.request.user.student, trip=trip, amount=trip.driver.price
         )

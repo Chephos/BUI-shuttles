@@ -1,12 +1,12 @@
 from rest_framework import serializers
 
-from bui_shuttles.bookings.models import Booking
+from bui_shuttles.bookings import models
 from bui_shuttles.bookings import choices
 
 
 class BookingCreate(serializers.ModelSerializer):
     class Meta:
-        model = Booking
+        model = models.Booking
         fields = ["trip"]
 
 
@@ -24,5 +24,7 @@ class Booking(serializers.Serializer):
         }
 
 
-class BookingList(Booking):
-    student = None
+class BookingList(serializers.ModelSerializer):
+    class Meta:
+        model = models.Booking
+        fields = ["id", "trip", "amount", "status"]

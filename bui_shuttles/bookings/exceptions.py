@@ -1,6 +1,7 @@
 from rest_framework.exceptions import APIException
 
-class InvalidTrip(APIException):
+
+class AlreadyBooked(APIException):
     status_code = 400
-    default_detail = "Invalid trip"
-    default_code = "invalid_trip"
+    default_detail = "You have already booked this trip"
+    default_code = "already_booked"

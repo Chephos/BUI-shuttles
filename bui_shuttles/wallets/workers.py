@@ -11,7 +11,7 @@ from bui_shuttles.wallets import models, choices
 from bui_shuttles.services.paystack import PaystackService
 from bui_shuttles.bookings import workers as booking_workers, choices as booking_choices
 from bui_shuttles.users import workers as user_workers
-from bui_shuttles.trips import  workers as trip_workers
+from bui_shuttles.trips import workers as trip_workers
 
 
 REDIS = redis.from_url(settings.REDIS_URL, decode_responses=True)
@@ -38,7 +38,11 @@ class Transaction:
                 amount,
                 owner.email,
                 ref,
-                metadata={"transaction_type": type, "driver": booking.trip.driver.user.email,"booking_id": booking.id},
+                metadata={
+                    "transaction_type": type,
+                    "driver": booking.trip.driver.user.email,
+                    "booking_id": booking.id,
+                },
             )
 
             return cls.model.objects.create(
@@ -57,7 +61,6 @@ class Transaction:
             status=choices.TransactionStatus.successful.value,
             owner=owner,
             booking=booking,
-
         )
 
     @classmethod
@@ -67,6 +70,19 @@ class Transaction:
             trans.status = new_status
             trans.save()
             return trans
+
+    @classmethod
+    def get_transactions(cls, user):
+        """
+        Get all transactions for a user
+        :param user: User object
+        :return: QuerySet of transactions
+        """
+        return (
+            cls.model.objects.filter(owner=user)
+            .order_by("-created")
+            .select_related("booking")
+        )
 
 
 class Paystack:
@@ -126,28 +142,34 @@ class Paystack:
         :return:
         """
         if event in ["charge.success"]:
-            
-                Transaction.complete_transaction(
-                    data["reference"], choices.TransactionStatus.successful.value
-                )
-                Transaction.create_transaction(
-                    data["amount"],
-                    choices.TransactionType.credit.value,
-                    user_workers.User.get_user_by_email(data["metadata"]["driver"]),
-                    booking_workers.Booking.get_booking_by_id(data["metadata"]["booking_id"]),
-                    for_driver=True,
-                )
-                booking_workers.Booking.complete_booking(data["metadata"]["booking_id"], booking_choices.BookingStatus.completed.value)
-            
+
+            Transaction.complete_transaction(
+                data["reference"], choices.TransactionStatus.successful.value
+            )
+            Transaction.create_transaction(
+                data["amount"],
+                choices.TransactionType.credit.value,
+                user_workers.User.get_user_by_email(data["metadata"]["driver"]),
+                booking_workers.Booking.get_booking_by_id(
+                    data["metadata"]["booking_id"]
+                ),
+                for_driver=True,
+            )
+            booking_workers.Booking.complete_booking(
+                data["metadata"]["booking_id"],
+                booking_choices.BookingStatus.completed.value,
+            )
+
         elif event in ["transfer.failed", "transfer.reversed"]:
             try:
                 Transaction.complete_transaction(
                     data["reference"], choices.TransactionStatus.failed.value
                 )
-                failed_booking = booking_workers.Booking.complete_booking(data["metadata"]["booking_id"], booking_choices.BookingStatus.failed.value)
+                failed_booking = booking_workers.Booking.complete_booking(
+                    data["metadata"]["booking_id"],
+                    booking_choices.BookingStatus.failed.value,
+                )
                 trip_workers.Trip.occupy_or_free_seat(failed_booking.trip.id, "free")
 
             except models.Transaction.DoesNotExist:
                 pass
-
-    

@@ -75,6 +75,8 @@ class Trip(
                     self.request.user.driver
                 ).values()
             ]
+        if self.action == "update":
+            context["trip"] = self.get_object()
         return context
 
     def get_permissions(self):

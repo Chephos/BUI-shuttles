@@ -21,6 +21,24 @@ class Trip:
         return None
 
     @classmethod
+    def get_bookable_trip(cls, trip_id):
+        trip = cls.get_trip_by_id(trip_id)
+    
+        if not trip:
+            return None
+        if trip.status not in [
+            choices.TripStatus.not_started,
+            choices.TripStatus.not_started.value,
+        ]:
+            return None
+        if trip.available_seats <= 0:
+            return None
+        if trip.take_off_time < timezone.now():
+            return None
+        
+        return trip
+
+    @classmethod
     def occupy_or_free_seat(cls, trip_id, action):
         trip = cls.get_trip_by_id(trip_id)
         if not trip:
@@ -37,7 +55,7 @@ class Trip:
         cls, route_id, driver: user_models.Driver, available_seats, take_off_time
     ):
         if cls.model.objects.filter(take_off_time=take_off_time, driver=driver).first():
-             # todo: cannot create trip for the same take off time twice
+            # todo: cannot create trip for the same take off time twice
             raise ValueError()
         trip = cls.model.objects.create(
             route=route_id,
@@ -46,12 +64,15 @@ class Trip:
             take_off_time=take_off_time,
         )
         return trip
-    
+
     @classmethod
     def get_driver_trips(cls, driver: user_models.Driver):
-        return cls.model.objects.filter(driver=driver).select_related("route").order_by(
-            "-take_off_time"
-        ).prefetch_related("bookings")
+        return (
+            cls.model.objects.filter(driver=driver)
+            .select_related("route")
+            .order_by("-take_off_time")
+            .prefetch_related("bookings")
+        )
 
 
 class Route:
@@ -79,5 +100,6 @@ class Route:
     @classmethod
     def get_route_trips(cls, route):
         return route.trips.filter(
-            status=choices.TripStatus.not_started.value, take_off_time__gt=timezone.now()
+            status=choices.TripStatus.not_started.value,
+            take_off_time__gt=timezone.now(),
         )
