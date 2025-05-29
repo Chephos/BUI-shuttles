@@ -39,7 +39,7 @@ class Route(
         return context
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve"]:
+        if self.action in ["list", "retrieve", "create"]:
             self.permission_classes = [permissions.AllowAny]
         self.permission_classes = [user_permissions.IsDriver]
         return super().get_permissions()
