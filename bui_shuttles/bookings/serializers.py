@@ -10,17 +10,21 @@ class BookingCreate(serializers.ModelSerializer):
         fields = ["trip"]
 
 
-class Booking(serializers.Serializer):
+class Booking(serializers.ModelSerializer):
     student = serializers.SerializerMethodField()
-    trip = serializers.IntegerField()
     amount = serializers.IntegerField()
     status = serializers.ChoiceField(choices=choices.BookingStatus.choices)
 
+    class Meta:
+        model = models.Booking
+        fields = ["id", "trip", "amount", "status", "student"]
+
     def get_student(self, obj):
+
         return {
             "id": obj.booker.id,
-            "name": obj.booker.name,
-            "email": obj.booker.email,
+            "name": obj.booker.user.first_name + " " + obj.booker.user.last_name,
+            "email": obj.booker.user.email,
         }
 
 
