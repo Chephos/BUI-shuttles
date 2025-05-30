@@ -129,6 +129,21 @@ class Driver:
         return models.Driver.objects.filter(available=True)
 
     @classmethod
+    def verify_bank_account(cls, user, bank_details: dict):
+        """
+        Verify bank account details
+        """
+        driver = user.driver
+        bank_account_name = bank_details["bank_account_name"].lower()
+        # Verify account name matches BVN name
+        first, last = user.first_name.lower(), user.last_name.lower()
+        for name in [first, last]:  # TODO: handle edgecase for names with hyphens
+
+            if name not in bank_account_name and name != "":
+                return False
+        return True
+
+    @classmethod
     def add_bank(cls, user, bank_details: dict):
         """
         Add bank details to a user

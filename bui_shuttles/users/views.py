@@ -138,11 +138,15 @@ class Logout(views.APIView):
 
 class AddBank(views.APIView):
     serializer_class = serializers.BankDetail
-    permission_classes = [~user_permissions.HasBankDetails]
+    permission_classes = [user_permissions.HasBankDetails]
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
+        if not workers.Driver.verify_bank_account(
+            user=request.user, bank_details=serializer.validated_data
+        ):
+            raise exceptions.BankVerificationFailed
         workers.Driver.add_bank(request.user, serializer.validated_data)
         return response.Response(
             status=status.HTTP_200_OK,
