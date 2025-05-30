@@ -18,7 +18,6 @@ from bui_shuttles.users import permissions as user_permissions, choices as user_
 class Route(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
-    mixins.CreateModelMixin,
     viewsets.GenericViewSet,
 ):
     queryset = models.Route.objects.all().prefetch_related("trips")
